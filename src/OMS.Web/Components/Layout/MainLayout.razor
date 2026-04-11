@@ -1,0 +1,31 @@
+@inherits LayoutComponentBase
+
+<div class="app-layout">
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <div class="brand-icon">O</div>
+            <span class="brand-text">OMS</span>
+        </div>
+        <div class="sidebar-nav">
+            <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                <span class="nav-icon">📊</span>
+                <span class="nav-text">Dashboard</span>
+            </NavLink>
+            <NavLink class="nav-link" href="orders">
+                <span class="nav-icon">📦</span>
+                <span class="nav-text">Orders</span>
+            </NavLink>
+            <NavLink class="nav-link" href="products">
+                <span class="nav-icon">🏷️</span>
+                <span class="nav-text">Products</span>
+            </NavLink>
+            <NavLink class="nav-link" href="customers">
+                <span class="nav-icon">👥</span>
+                <span class="nav-text">Customers</span>
+            </NavLink>
+        </div>
+    </nav>
+    <main class="main-content">
+        @Body
+    </main>
+</div>

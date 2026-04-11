@@ -1,0 +1,243 @@
+@page "/products"
+@inject IProductService ProductService
+@rendermode RenderMode.InteractiveServer
+
+<PageTitle>Products - OMS</PageTitle>
+
+<div class="page-header page-header-actions">
+    <div>
+        <h1>Products</h1>
+        <p>Manage your product inventory</p>
+    </div>
+    <button class="btn btn-primary" @onclick="ShowCreateModal">+ New Product</button>
+</div>
+
+<div class="toolbar">
+    <div class="search-input">
+        <span class="search-icon">🔍</span>
+        <input class="form-control" placeholder="Search products..." @bind="searchText" @bind:event="oninput" @onkeyup="Search" />
+    </div>
+</div>
+
+@if (loading)
+{
+    <div class="loading"><div class="spinner"></div><span>Loading products...</span></div>
+}
+else
+{
+    <div class="data-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>SKU</th>
+                    <th>Price</th>
+                    <th>Stock</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (products?.Items?.Any() == true)
+                {
+                    @foreach (var product in products.Items)
+                    {
+                        <tr>
+                            <td>
+                                <div><strong>@product.Name</strong></div>
+                                @if (!string.IsNullOrEmpty(product.Description))
+                                {
+                                    <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">@(product.Description.Length > 60 ? product.Description[..60] + "..." : product.Description)</div>
+                                }
+                            </td>
+                            <td><code style="background:var(--bg-secondary);padding:2px 8px;border-radius:4px;font-size:12px;">@product.SKU</code></td>
+                            <td class="money">$@product.Price.ToString("N2")</td>
+                            <td><strong>@product.StockQuantity</strong></td>
+                            <td>
+                                @if (product.StockQuantity == 0)
+                                {
+                                    <span class="badge badge-cancelled">Out of Stock</span>
+                                }
+                                else if (product.StockQuantity < 10)
+                                {
+                                    <span class="badge badge-pending">Low Stock</span>
+                                }
+                                else
+                                {
+                                    <span class="badge badge-fulfilled">In Stock</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-outline btn-sm" @onclick="() => ShowEditModal(product)">Edit</button>
+                                    <button class="btn btn-danger btn-sm" @onclick="() => DeleteProduct(product.Id)">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="6">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">🏷️</div>
+                            <h3>No products found</h3>
+                            <p>Add your first product to get started</p>
+                        </div>
+                    </td></tr>
+                }
+            </tbody>
+        </table>
+        @if (products != null && products.TotalPages > 1)
+        {
+            <div class="pagination">
+                <div class="pagination-info">Showing @((products.Page - 1) * products.PageSize + 1)–@Math.Min(products.Page * products.PageSize, products.TotalCount) of @products.TotalCount</div>
+                <div class="pagination-buttons">
+                    <button class="page-btn" disabled="@(products.Page <= 1)" @onclick="() => ChangePage(products.Page - 1)">← Prev</button>
+                    @for (int i = 1; i <= products.TotalPages && i <= 5; i++)
+                    {
+                        var p = i;
+                        <button class="page-btn @(p == products.Page ? "active" : "")" @onclick="() => ChangePage(p)">@p</button>
+                    }
+                    <button class="page-btn" disabled="@(products.Page >= products.TotalPages)" @onclick="() => ChangePage(products.Page + 1)">Next →</button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(toastMessage))
+{
+    <div class="toast-container">
+        <div class="toast @(toastIsError ? "toast-error" : "toast-success")">@toastMessage</div>
+    </div>
+}
+
+@if (showModal)
+{
+    <div class="modal-backdrop" @onclick="CloseModal">
+        <div class="modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>@(editingProduct != null ? "Edit Product" : "Add New Product")</h3>
+                <button class="close-btn" @onclick="CloseModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Product Name</label>
+                        <input class="form-control" @bind="formName" placeholder="e.g. Wireless Keyboard" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">SKU</label>
+                        <input class="form-control" @bind="formSku" placeholder="e.g. KB-W001" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" @bind="formDescription" placeholder="Product description"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Price ($)</label>
+                        <input type="number" step="0.01" class="form-control" @bind="formPrice" placeholder="0.00" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Stock Quantity</label>
+                        <input type="number" class="form-control" @bind="formStock" placeholder="0" />
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(formError))
+                {
+                    <div class="form-error">@formError</div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" @onclick="CloseModal">Cancel</button>
+                <button class="btn btn-primary" @onclick="SaveProduct">@(editingProduct != null ? "Update" : "Create") Product</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private PagedResponse<ProductDto>? products;
+    private bool loading = true;
+    private string searchText = "";
+    private int currentPage = 1;
+    private bool showModal;
+    private ProductDto? editingProduct;
+    private string formName = "", formSku = "", formDescription = "";
+    private decimal formPrice;
+    private int formStock;
+    private string? formError, toastMessage;
+    private bool toastIsError;
+
+    protected override async Task OnInitializedAsync() => await LoadProducts();
+
+    async Task LoadProducts()
+    {
+        loading = true;
+        products = await ProductService.GetProductsAsync(new PagedRequest { Page = currentPage, PageSize = 10, Search = searchText });
+        loading = false;
+    }
+
+    async Task Search() { currentPage = 1; await LoadProducts(); }
+    async Task ChangePage(int page) { currentPage = page; await LoadProducts(); }
+
+    void ShowCreateModal()
+    {
+        editingProduct = null;
+        formName = formSku = formDescription = "";
+        formPrice = 0; formStock = 0; formError = null;
+        showModal = true;
+    }
+
+    void ShowEditModal(ProductDto p)
+    {
+        editingProduct = p;
+        formName = p.Name; formSku = p.SKU; formDescription = p.Description ?? "";
+        formPrice = p.Price; formStock = p.StockQuantity; formError = null;
+        showModal = true;
+    }
+
+    void CloseModal() => showModal = false;
+
+    async Task SaveProduct()
+    {
+        formError = null;
+        if (string.IsNullOrWhiteSpace(formName)) { formError = "Name is required."; return; }
+        if (string.IsNullOrWhiteSpace(formSku)) { formError = "SKU is required."; return; }
+        if (formPrice <= 0) { formError = "Price must be positive."; return; }
+
+        try
+        {
+            if (editingProduct == null)
+            {
+                await ProductService.CreateProductAsync(new CreateProductRequest
+                { Name = formName, SKU = formSku, Description = formDescription, Price = formPrice, StockQuantity = formStock });
+                ShowToast("Product created!");
+            }
+            else
+            {
+                await ProductService.UpdateProductAsync(editingProduct.Id, new UpdateProductRequest
+                { Name = formName, SKU = formSku, Description = formDescription, Price = formPrice, StockQuantity = formStock });
+                ShowToast("Product updated!");
+            }
+            showModal = false;
+            await LoadProducts();
+        }
+        catch (Exception ex) { formError = ex.Message; }
+    }
+
+    async Task DeleteProduct(int id)
+    {
+        try { await ProductService.DeleteProductAsync(id); ShowToast("Product deleted."); await LoadProducts(); }
+        catch (Exception ex) { ShowToast(ex.Message, true); }
+    }
+
+    async void ShowToast(string msg, bool isError = false)
+    {
+        toastMessage = msg; toastIsError = isError; StateHasChanged();
+        await Task.Delay(3000); toastMessage = null; StateHasChanged();
+    }
+}

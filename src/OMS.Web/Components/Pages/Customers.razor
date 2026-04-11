@@ -1,0 +1,214 @@
+@page "/customers"
+@inject ICustomerService CustomerService
+@rendermode RenderMode.InteractiveServer
+
+<PageTitle>Customers - OMS</PageTitle>
+
+<div class="page-header page-header-actions">
+    <div>
+        <h1>Customers</h1>
+        <p>Manage your customer database</p>
+    </div>
+    <button class="btn btn-primary" @onclick="ShowCreateModal">+ New Customer</button>
+</div>
+
+<div class="toolbar">
+    <div class="search-input">
+        <span class="search-icon">🔍</span>
+        <input class="form-control" placeholder="Search customers..." @bind="searchText" @bind:event="oninput" @onkeyup="Search" />
+    </div>
+</div>
+
+@if (loading)
+{
+    <div class="loading"><div class="spinner"></div><span>Loading customers...</span></div>
+}
+else
+{
+    <div class="data-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Customer</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Address</th>
+                    <th>Orders</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (customers?.Items?.Any() == true)
+                {
+                    @foreach (var customer in customers.Items)
+                    {
+                        <tr>
+                            <td><strong>@customer.Name</strong></td>
+                            <td>@customer.Email</td>
+                            <td>@(customer.Phone ?? "—")</td>
+                            <td><span style="max-width:200px;display:inline-block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">@(customer.Address ?? "—")</span></td>
+                            <td><span class="badge badge-processing">@customer.OrderCount</span></td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-outline btn-sm" @onclick="() => ShowEditModal(customer)">Edit</button>
+                                    <button class="btn btn-danger btn-sm" @onclick="() => DeleteCustomer(customer.Id)">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="6">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">👥</div>
+                            <h3>No customers found</h3>
+                            <p>Add your first customer to get started</p>
+                        </div>
+                    </td></tr>
+                }
+            </tbody>
+        </table>
+        @if (customers != null && customers.TotalPages > 1)
+        {
+            <div class="pagination">
+                <div class="pagination-info">Showing @((customers.Page - 1) * customers.PageSize + 1)–@Math.Min(customers.Page * customers.PageSize, customers.TotalCount) of @customers.TotalCount</div>
+                <div class="pagination-buttons">
+                    <button class="page-btn" disabled="@(customers.Page <= 1)" @onclick="() => ChangePage(customers.Page - 1)">← Prev</button>
+                    @for (int i = 1; i <= customers.TotalPages && i <= 5; i++)
+                    {
+                        var p = i;
+                        <button class="page-btn @(p == customers.Page ? "active" : "")" @onclick="() => ChangePage(p)">@p</button>
+                    }
+                    <button class="page-btn" disabled="@(customers.Page >= customers.TotalPages)" @onclick="() => ChangePage(customers.Page + 1)">Next →</button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@if (!string.IsNullOrEmpty(toastMessage))
+{
+    <div class="toast-container">
+        <div class="toast @(toastIsError ? "toast-error" : "toast-success")">@toastMessage</div>
+    </div>
+}
+
+@if (showModal)
+{
+    <div class="modal-backdrop" @onclick="CloseModal">
+        <div class="modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>@(editingCustomer != null ? "Edit Customer" : "Add New Customer")</h3>
+                <button class="close-btn" @onclick="CloseModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Full Name</label>
+                        <input class="form-control" @bind="formName" placeholder="e.g. John Doe" />
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" @bind="formEmail" placeholder="e.g. john@example.com" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Address</label>
+                    <input class="form-control" @bind="formAddress" placeholder="Full address" />
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Phone</label>
+                    <input class="form-control" @bind="formPhone" placeholder="+1-555-0100" />
+                </div>
+                @if (!string.IsNullOrEmpty(formError))
+                {
+                    <div class="form-error">@formError</div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" @onclick="CloseModal">Cancel</button>
+                <button class="btn btn-primary" @onclick="SaveCustomer">@(editingCustomer != null ? "Update" : "Create") Customer</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private PagedResponse<CustomerDto>? customers;
+    private bool loading = true;
+    private string searchText = "";
+    private int currentPage = 1;
+    private bool showModal;
+    private CustomerDto? editingCustomer;
+    private string formName = "", formEmail = "", formAddress = "", formPhone = "";
+    private string? formError, toastMessage;
+    private bool toastIsError;
+
+    protected override async Task OnInitializedAsync() => await LoadCustomers();
+
+    async Task LoadCustomers()
+    {
+        loading = true;
+        customers = await CustomerService.GetCustomersAsync(new PagedRequest { Page = currentPage, PageSize = 10, Search = searchText });
+        loading = false;
+    }
+
+    async Task Search() { currentPage = 1; await LoadCustomers(); }
+    async Task ChangePage(int page) { currentPage = page; await LoadCustomers(); }
+
+    void ShowCreateModal()
+    {
+        editingCustomer = null;
+        formName = formEmail = formAddress = formPhone = "";
+        formError = null; showModal = true;
+    }
+
+    void ShowEditModal(CustomerDto c)
+    {
+        editingCustomer = c;
+        formName = c.Name; formEmail = c.Email;
+        formAddress = c.Address ?? ""; formPhone = c.Phone ?? "";
+        formError = null; showModal = true;
+    }
+
+    void CloseModal() => showModal = false;
+
+    async Task SaveCustomer()
+    {
+        formError = null;
+        if (string.IsNullOrWhiteSpace(formName)) { formError = "Name is required."; return; }
+        if (string.IsNullOrWhiteSpace(formEmail)) { formError = "Email is required."; return; }
+
+        try
+        {
+            if (editingCustomer == null)
+            {
+                await CustomerService.CreateCustomerAsync(new CreateCustomerRequest
+                { Name = formName, Email = formEmail, Address = formAddress, Phone = formPhone });
+                ShowToast("Customer created!");
+            }
+            else
+            {
+                await CustomerService.UpdateCustomerAsync(editingCustomer.Id, new UpdateCustomerRequest
+                { Name = formName, Email = formEmail, Address = formAddress, Phone = formPhone });
+                ShowToast("Customer updated!");
+            }
+            showModal = false;
+            await LoadCustomers();
+        }
+        catch (Exception ex) { formError = ex.Message; }
+    }
+
+    async Task DeleteCustomer(int id)
+    {
+        try { await CustomerService.DeleteCustomerAsync(id); ShowToast("Customer deleted."); await LoadCustomers(); }
+        catch (Exception ex) { ShowToast(ex.Message, true); }
+    }
+
+    async void ShowToast(string msg, bool isError = false)
+    {
+        toastMessage = msg; toastIsError = isError; StateHasChanged();
+        await Task.Delay(3000); toastMessage = null; StateHasChanged();
+    }
+}

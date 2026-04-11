@@ -1,0 +1,111 @@
+@page "/"
+@inject IOrderService OrderService
+@rendermode RenderMode.InteractiveServer
+
+<PageTitle>Dashboard - OMS</PageTitle>
+
+<div class="page-header">
+    <h1>Dashboard</h1>
+    <p>Overview of your order management system</p>
+</div>
+
+@if (dashboard == null)
+{
+    <div class="loading"><div class="spinner"></div><span>Loading dashboard...</span></div>
+}
+else
+{
+    <div class="stat-grid">
+        <div class="stat-card">
+            <div class="stat-icon blue">📦</div>
+            <div class="stat-value">@dashboard.TotalOrders</div>
+            <div class="stat-label">Total Orders</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon yellow">⏳</div>
+            <div class="stat-value">@dashboard.PendingOrders</div>
+            <div class="stat-label">Pending Orders</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon blue">🔄</div>
+            <div class="stat-value">@dashboard.ProcessingOrders</div>
+            <div class="stat-label">Processing</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">✅</div>
+            <div class="stat-value">@dashboard.FulfilledOrders</div>
+            <div class="stat-label">Fulfilled</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">💰</div>
+            <div class="stat-value money">$@dashboard.TotalRevenue.ToString("N2")</div>
+            <div class="stat-label">Total Revenue</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon blue">🏷️</div>
+            <div class="stat-value">@dashboard.TotalProducts</div>
+            <div class="stat-label">Total Products</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon red">⚠️</div>
+            <div class="stat-value">@dashboard.LowStockProducts</div>
+            <div class="stat-label">Low Stock Items</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon blue">👥</div>
+            <div class="stat-value">@dashboard.TotalCustomers</div>
+            <div class="stat-label">Total Customers</div>
+        </div>
+    </div>
+
+    <div class="data-card">
+        <div class="data-card-header">
+            <h2>Recent Orders</h2>
+            <a href="orders" class="btn btn-outline btn-sm">View All →</a>
+        </div>
+        @if (dashboard.RecentOrders.Any())
+        {
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Order #</th>
+                        <th>Customer</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var order in dashboard.RecentOrders)
+                    {
+                        <tr>
+                            <td><strong>#@order.Id</strong></td>
+                            <td>@order.CustomerName</td>
+                            <td>@order.OrderDate.ToString("MMM dd, yyyy")</td>
+                            <td><span class="badge badge-@order.Status.ToLower()">@order.Status</span></td>
+                            <td class="money">$@order.TotalAmount.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="empty-state">
+                <div class="empty-state-icon">📦</div>
+                <h3>No orders yet</h3>
+                <p>Create your first order to get started</p>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private DashboardDto? dashboard;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { dashboard = await OrderService.GetDashboardAsync(); }
+        catch { dashboard = new DashboardDto(); }
+    }
+}

@@ -1,0 +1,307 @@
+@page "/orders"
+@inject IOrderService OrderService
+@inject ICustomerService CustomerService
+@inject IProductService ProductService
+@rendermode RenderMode.InteractiveServer
+
+<PageTitle>Orders - OMS</PageTitle>
+
+<div class="page-header page-header-actions">
+    <div>
+        <h1>Orders</h1>
+        <p>Manage and track all orders</p>
+    </div>
+    <button class="btn btn-primary" @onclick="ShowCreateModal">+ New Order</button>
+</div>
+
+<div class="toolbar">
+    <div class="search-input">
+        <span class="search-icon">🔍</span>
+        <input class="form-control" placeholder="Search orders..." @bind="searchText" @bind:event="oninput" @onkeyup="Search" />
+    </div>
+</div>
+
+@if (loading)
+{
+    <div class="loading"><div class="spinner"></div><span>Loading orders...</span></div>
+}
+else
+{
+    <div class="data-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Order #</th>
+                    <th>Customer</th>
+                    <th>Date</th>
+                    <th>Items</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (orders?.Items?.Any() == true)
+                {
+                    @foreach (var order in orders.Items)
+                    {
+                        <tr>
+                            <td><strong>#@order.Id</strong></td>
+                            <td>@order.CustomerName</td>
+                            <td>@order.OrderDate.ToString("MMM dd, yyyy")</td>
+                            <td>@order.Items.Count item(s)</td>
+                            <td class="money">$@order.TotalAmount.ToString("N2")</td>
+                            <td><span class="badge badge-@order.Status.ToLower()">@order.Status</span></td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-outline btn-sm" @onclick="() => ShowEditModal(order)">Edit</button>
+                                    @if (order.Status == "Pending" || order.Status == "Processing")
+                                    {
+                                        <button class="btn btn-success btn-sm" @onclick="() => FulfillOrder(order.Id)">Fulfill</button>
+                                    }
+                                    <button class="btn btn-danger btn-sm" @onclick="() => DeleteOrder(order.Id)">Delete</button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="7">
+                        <div class="empty-state">
+                            <div class="empty-state-icon">📦</div>
+                            <h3>No orders found</h3>
+                            <p>Create a new order to get started</p>
+                        </div>
+                    </td></tr>
+                }
+            </tbody>
+        </table>
+        @if (orders != null && orders.TotalPages > 1)
+        {
+            <div class="pagination">
+                <div class="pagination-info">Showing @((orders.Page - 1) * orders.PageSize + 1)–@Math.Min(orders.Page * orders.PageSize, orders.TotalCount) of @orders.TotalCount</div>
+                <div class="pagination-buttons">
+                    <button class="page-btn" disabled="@(orders.Page <= 1)" @onclick="() => ChangePage(orders.Page - 1)">← Prev</button>
+                    @for (int i = 1; i <= orders.TotalPages && i <= 5; i++)
+                    {
+                        var p = i;
+                        <button class="page-btn @(p == orders.Page ? "active" : "")" @onclick="() => ChangePage(p)">@p</button>
+                    }
+                    <button class="page-btn" disabled="@(orders.Page >= orders.TotalPages)" @onclick="() => ChangePage(orders.Page + 1)">Next →</button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@* Toast *@
+@if (!string.IsNullOrEmpty(toastMessage))
+{
+    <div class="toast-container">
+        <div class="toast @(toastIsError ? "toast-error" : "toast-success")">@toastMessage</div>
+    </div>
+}
+
+@* Create/Edit Modal *@
+@if (showModal)
+{
+    <div class="modal-backdrop" @onclick="CloseModal">
+        <div class="modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>@(editingOrder != null ? "Edit Order" : "Create New Order")</h3>
+                <button class="close-btn" @onclick="CloseModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">Customer</label>
+                    <select class="form-control" @bind="formCustomerId">
+                        <option value="0">Select customer...</option>
+                        @if (customers != null)
+                        {
+                            @foreach (var c in customers)
+                            {
+                                <option value="@c.Id">@c.Name (@c.Email)</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Notes</label>
+                    <textarea class="form-control" @bind="formNotes" placeholder="Order notes (optional)"></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Order Items</label>
+                    @foreach (var item in formItems)
+                    {
+                        <div class="form-row" style="margin-bottom:8px;align-items:end;">
+                            <div>
+                                <select class="form-control" @bind="item.ProductId">
+                                    <option value="0">Select product...</option>
+                                    @if (products != null)
+                                    {
+                                        @foreach (var p in products)
+                                        {
+                                            <option value="@p.Id">@p.Name ($@p.Price) — Stock: @p.StockQuantity</option>
+                                        }
+                                    }
+                                </select>
+                            </div>
+                            <div style="display:flex;gap:8px;">
+                                <input type="number" class="form-control" @bind="item.Quantity" min="1" placeholder="Qty" style="max-width:100px;" />
+                                <button class="btn btn-danger btn-sm btn-icon" @onclick="() => formItems.Remove(item)">✕</button>
+                            </div>
+                        </div>
+                    }
+                    <button class="btn btn-outline btn-sm" @onclick="AddItem" style="margin-top:8px;">+ Add Item</button>
+                </div>
+                @if (!string.IsNullOrEmpty(formError))
+                {
+                    <div class="form-error">@formError</div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" @onclick="CloseModal">Cancel</button>
+                <button class="btn btn-primary" @onclick="SaveOrder">@(editingOrder != null ? "Update" : "Create") Order</button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private PagedResponse<OrderDto>? orders;
+    private List<CustomerDto>? customers;
+    private List<ProductDto>? products;
+    private bool loading = true;
+    private string searchText = "";
+    private int currentPage = 1;
+
+    // Modal state
+    private bool showModal;
+    private OrderDto? editingOrder;
+    private int formCustomerId;
+    private string? formNotes;
+    private List<CreateOrderItemRequest> formItems = new();
+    private string? formError;
+
+    // Toast
+    private string? toastMessage;
+    private bool toastIsError;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOrders();
+        var custResponse = await CustomerService.GetCustomersAsync(new PagedRequest { PageSize = 100 });
+        customers = custResponse.Items.ToList();
+        var prodResponse = await ProductService.GetProductsAsync(new PagedRequest { PageSize = 100 });
+        products = prodResponse.Items.ToList();
+    }
+
+    async Task LoadOrders()
+    {
+        loading = true;
+        orders = await OrderService.GetOrdersAsync(new PagedRequest
+        {
+            Page = currentPage,
+            PageSize = 10,
+            Search = searchText
+        });
+        loading = false;
+    }
+
+    async Task Search() { currentPage = 1; await LoadOrders(); }
+    async Task ChangePage(int page) { currentPage = page; await LoadOrders(); }
+
+    void ShowCreateModal()
+    {
+        editingOrder = null;
+        formCustomerId = 0;
+        formNotes = "";
+        formItems = new() { new() };
+        formError = null;
+        showModal = true;
+    }
+
+    void ShowEditModal(OrderDto order)
+    {
+        editingOrder = order;
+        formCustomerId = order.CustomerId;
+        formNotes = order.Notes;
+        formItems = order.Items.Select(i => new CreateOrderItemRequest { ProductId = i.ProductId, Quantity = i.Quantity }).ToList();
+        if (!formItems.Any()) formItems.Add(new());
+        formError = null;
+        showModal = true;
+    }
+
+    void CloseModal() { showModal = false; }
+    void AddItem() { formItems.Add(new CreateOrderItemRequest()); }
+
+    async Task SaveOrder()
+    {
+        formError = null;
+        if (formCustomerId == 0) { formError = "Please select a customer."; return; }
+        if (!formItems.Any(i => i.ProductId > 0)) { formError = "Add at least one product."; return; }
+
+        var validItems = formItems.Where(i => i.ProductId > 0 && i.Quantity > 0).ToList();
+        if (!validItems.Any()) { formError = "Please fill in all items."; return; }
+
+        try
+        {
+            if (editingOrder == null)
+            {
+                await OrderService.CreateOrderAsync(new CreateOrderRequest
+                {
+                    CustomerId = formCustomerId,
+                    Notes = formNotes,
+                    Items = validItems
+                }, null);
+                ShowToast("Order created successfully!");
+            }
+            else
+            {
+                await OrderService.UpdateOrderAsync(editingOrder.Id, new UpdateOrderRequest
+                {
+                    CustomerId = formCustomerId,
+                    Notes = formNotes,
+                    Items = validItems
+                });
+                ShowToast("Order updated successfully!");
+            }
+            showModal = false;
+            await LoadOrders();
+        }
+        catch (Exception ex) { formError = ex.Message; }
+    }
+
+    async Task FulfillOrder(int id)
+    {
+        try
+        {
+            await OrderService.FulfillOrderAsync(id);
+            ShowToast("Order fulfilled! Inventory updated.");
+            await LoadOrders();
+        }
+        catch (Exception ex) { ShowToast(ex.Message, true); }
+    }
+
+    async Task DeleteOrder(int id)
+    {
+        try
+        {
+            await OrderService.DeleteOrderAsync(id);
+            ShowToast("Order deleted.");
+            await LoadOrders();
+        }
+        catch (Exception ex) { ShowToast(ex.Message, true); }
+    }
+
+    async void ShowToast(string msg, bool isError = false)
+    {
+        toastMessage = msg;
+        toastIsError = isError;
+        StateHasChanged();
+        await Task.Delay(3000);
+        toastMessage = null;
+        StateHasChanged();
+    }
+}
