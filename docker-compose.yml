@@ -1,0 +1,83 @@
+version: '3.8'
+
+services:
+  dotnet-app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: oms-api:1.2617.0
+    container_name: oms_app_server
+    ports:
+      - "5001:5001"
+    networks:
+      - monitoring
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=mysql;Database=OrderManagementSystem;User=root;Password=<root_password>;
+      - Jwt__Key=45a501af1ccd42f78c4c75cba2b7350d;
+      - Jwt__Issuer=OMS;
+      - Jwt__Audience=OMS;
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  dotnet-web:
+    build:
+      context: ..
+      dockerfile: Dockerfile.Web
+    image: oms-web:1.2617.0
+    container_name: oms_web_server
+    ports:
+      - "5016:5016"
+    networks:
+      - monitoring
+    environment:
+      - ConnectionStrings__DefaultConnection=Server=mysql;Database=OrderManagementSystem;User=root;Password=<root_password>;
+    depends_on:
+      - dotnet-app
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_DATABASE: OrderManagementSystem
+      MYSQL_ROOT_PASSWORD: MYSQL@123
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 5
+    networks:
+      - monitoring
+    volumes:
+      - mysql_data:/var/lib/mysql
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana_data:/var/lib/grafana
+
+networks:
+  monitoring:
+
+volumes:
+  grafana_data:
+  prometheus_data:
+  mysql_data:
