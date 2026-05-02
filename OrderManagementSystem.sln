@@ -35,6 +35,18 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "prometheus", "prometheus", 
 		prometheus.yml = prometheus.yml
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "NewFolder1", "NewFolder1", "{4B7AAEF5-42DF-46B0-8F8A-21A704C3B774}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "monitor", "monitor", "{341D466B-E28E-4E4E-A219-02506737901F}"
+	ProjectSection(SolutionItems) = preProject
+		docker-compose.yml = docker-compose.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "prometheus", "prometheus", "{1A68039D-D24B-435D-9B8F-E7BD5888FA9D}"
+	ProjectSection(SolutionItems) = preProject
+		prometheus.yml = prometheus.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -133,6 +145,8 @@ Global
 		{842EFF08-FA68-414A-A13D-99938D1F3FD5} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{D4C42C2D-1F08-4AA1-94A5-E1579D516948} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{A7999209-9938-4606-8A52-EA605B0A285C} = {E5B66034-E489-401E-86D5-07B4E1466AE4}
+		{4B7AAEF5-42DF-46B0-8F8A-21A704C3B774} = {E5B66034-E489-401E-86D5-07B4E1466AE4}
+		{1A68039D-D24B-435D-9B8F-E7BD5888FA9D} = {341D466B-E28E-4E4E-A219-02506737901F}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CCF35AE6-76DB-4BD4-95A6-F32F11B6087A}

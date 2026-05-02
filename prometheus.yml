@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'oms_app_server'
+    static_configs:
+      - targets: ['oms_app_server:5001']
