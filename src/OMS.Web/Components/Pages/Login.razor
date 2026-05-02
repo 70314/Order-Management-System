@@ -1,0 +1,88 @@
+@page "/login"
+@layout Layout.EmptyLayout
+@inject IAuthService AuthService
+@inject NavigationManager NavManager
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Login - OMS</PageTitle>
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-header">
+            <div class="auth-logo">O</div>
+            <h1>Welcome Back</h1>
+            <p>Please enter your credentials to continue</p>
+        </div>
+
+        <EditForm Model="loginRequest" OnValidSubmit="HandleLogin" FormName="loginForm">
+            <DataAnnotationsValidator />
+
+            <div class="form-group">
+                <label class="form-label" for="email">Email Address</label>
+                <InputText id="email" class="form-control" @bind-Value="loginRequest.Email" placeholder="name@company.com" />
+                <ValidationMessage For="@(() => loginRequest.Email)" class="form-error" />
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="password">Password</label>
+                <InputText id="password" type="password" class="form-control" @bind-Value="loginRequest.Password" placeholder="••••••••" />
+                <ValidationMessage For="@(() => loginRequest.Password)" class="form-error" />
+            </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="form-error" style="margin-bottom: 20px; text-align: center; background: rgba(239, 68, 68, 0.1); padding: 10px; border-radius: 8px;">
+                    @errorMessage
+                </div>
+            }
+
+            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; height: 48px;" disabled="@isSubmitting">
+                @if (isSubmitting)
+                {
+                    <span class="spinner" style="width: 20px; height: 20px; border-width: 2px; margin-right: 8px;"></span>
+                    <span>Logging in...</span>
+                }
+                else
+                {
+                    <span>Login to Account</span>
+                }
+            </button>
+        </EditForm>
+
+        <div class="auth-footer">
+            Don't have an account? <a href="register">Register here</a>
+        </div>
+    </div>
+</div>
+
+@code {
+    [SupplyParameterFromForm]
+    private LoginRequest loginRequest { get; set; } = new();
+    
+    private string? errorMessage;
+    private bool isSubmitting;
+
+    private async Task HandleLogin()
+    {
+        isSubmitting = true;
+        errorMessage = null;
+
+        try
+        {
+            var response = await AuthService.LoginAsync(loginRequest);
+            if (response != null && !string.IsNullOrEmpty(response.Token))
+            {
+                await ((CustomAuthenticationStateProvider)AuthStateProvider).MarkUserAsAuthenticated(response.Token);
+                NavManager.NavigateTo("");
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+}

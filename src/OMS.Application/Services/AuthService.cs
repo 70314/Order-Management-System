@@ -11,7 +11,7 @@ using OMS.Domain.Entities;
 using OMS.Domain.Enums;
 using OMS.Domain.Interfaces;
 
-namespace OMS.Infrastructure.Services;
+namespace OMS.Application.Services;
 
 public class AuthService : IAuthService {
     private readonly IUnitOfWork _uow;

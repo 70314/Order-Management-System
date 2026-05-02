@@ -2,9 +2,11 @@ using OMS.Web.Components;
 using OMS.Application.Interfaces;
 using OMS.Domain.Interfaces;
 using OMS.Infrastructure.Data;
-using OMS.Infrastructure.Repositories;
-using OMS.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
+using OMS.Application.Services;
+using OMS.Infrastructure;
+using OMS.Web.Authentication;
+using Microsoft.AspNetCore.Components.Authorization;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,7 +16,9 @@ builder.Services.AddRazorComponents()
 
 // === Database ===
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseMySql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))));
 
 // === DI ===
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -22,6 +26,16 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICustomerService, CustomerService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+
+// === Auth ===
+builder.Services.AddAuthentication(options => {
+    options.DefaultScheme = "Cookies";
+}).AddCookie("Cookies", options => {
+    options.LoginPath = "/login";
+});
+builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
+builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
 
 var app = builder.Build();
 
@@ -32,6 +46,9 @@ if (!app.Environment.IsDevelopment()) {
 }
 
 app.UseHttpsRedirection();
+
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.UseAntiforgery();
 

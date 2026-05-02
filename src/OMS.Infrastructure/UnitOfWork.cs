@@ -1,8 +1,9 @@
 using OMS.Domain.Entities;
 using OMS.Domain.Interfaces;
 using OMS.Infrastructure.Data;
+using OMS.Infrastructure.Repositories;
 
-namespace OMS.Infrastructure.Repositories;
+namespace OMS.Infrastructure;
 
 public class UnitOfWork : IUnitOfWork {
     private readonly AppDbContext _context;

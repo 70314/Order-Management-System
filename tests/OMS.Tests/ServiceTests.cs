@@ -2,11 +2,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Moq;
 using OMS.Application.DTOs;
+using OMS.Application.Services;
 using OMS.Domain.Entities;
 using OMS.Domain.Enums;
 using OMS.Domain.Interfaces;
 using OMS.Infrastructure.Data;
-using OMS.Infrastructure.Services;
 
 namespace OMS.Tests;
 
@@ -20,7 +20,7 @@ public class OrderServiceTests {
 
     private (OrderService service, AppDbContext context) CreateService() {
         var context = CreateContext();
-        var uow = new OMS.Infrastructure.Repositories.UnitOfWork(context);
+        var uow = new OMS.Infrastructure.UnitOfWork(context);
         var logger = Mock.Of<ILogger<OrderService>>();
         return (new OrderService(uow, context, logger), context);
     }
@@ -151,7 +151,7 @@ public class ProductServiceTests {
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         var context = new AppDbContext(options);
-        var uow = new OMS.Infrastructure.Repositories.UnitOfWork(context);
+        var uow = new OMS.Infrastructure.UnitOfWork(context);
         var logger = Mock.Of<ILogger<ProductService>>();
         return (new ProductService(uow, logger), context);
     }
@@ -189,7 +189,7 @@ public class CustomerServiceTests {
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         var context = new AppDbContext(options);
-        var uow = new OMS.Infrastructure.Repositories.UnitOfWork(context);
+        var uow = new OMS.Infrastructure.UnitOfWork(context);
         var logger = Mock.Of<ILogger<CustomerService>>();
         return (new CustomerService(uow, logger), context);
     }

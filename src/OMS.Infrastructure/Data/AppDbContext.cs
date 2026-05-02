@@ -19,7 +19,7 @@ public class AppDbContext : DbContext {
         // User
         modelBuilder.Entity<User>(entity => {
             entity.HasIndex(e => e.Email).IsUnique();
-            entity.HasIndex(e => e.GoogleId).IsUnique().HasFilter("[GoogleId] IS NOT NULL");
+            entity.HasIndex(e => e.GoogleId).IsUnique().HasFilter("GoogleId IS NOT NULL");
             entity.Property(e => e.Email).HasMaxLength(256).IsRequired();
             entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
             entity.Property(e => e.PasswordHash).HasMaxLength(512);
@@ -80,7 +80,7 @@ public class AppDbContext : DbContext {
         modelBuilder.Entity<AuditLog>(entity => {
             entity.Property(e => e.EntityName).HasMaxLength(100).IsRequired();
             entity.Property(e => e.Action).HasMaxLength(50).IsRequired();
-            entity.Property(e => e.Changes).HasColumnType("nvarchar(max)");
+            entity.Property(e => e.Changes).HasColumnType("longtext");
 
             entity.HasOne(e => e.User)
                 .WithMany(u => u.AuditLogs)

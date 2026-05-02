@@ -8,7 +8,7 @@ using OMS.Domain.Enums;
 using OMS.Domain.Interfaces;
 using OMS.Infrastructure.Data;
 
-namespace OMS.Infrastructure.Services;
+namespace OMS.Application.Services;
 
 public class OrderService : IOrderService {
     private readonly IUnitOfWork _uow;
@@ -106,7 +106,7 @@ public class OrderService : IOrderService {
             EntityName = "Order",
             EntityId = 0, // Will be set after save
             Action = "Created",
-            Changes = JsonSerializer.Serialize(new { request.CustomerId, request.Notes, Items = request.Items }),
+            Changes = JsonSerializer.Serialize(new { request.CustomerId, request.Notes, request.Items }),
             UserId = userId
         });
 

@@ -1,6 +1,6 @@
 # Order Management System (OMS)
 
-A full-stack Order Management System built with ASP.NET Core, Blazor Server, and SQL Server.
+A full-stack Order Management System built with ASP.NET Core, Blazor Server, and MySQL.
 
 ## 🏗️ Architecture
 
@@ -21,7 +21,7 @@ OrderManagementSystem/
 ## 🚀 Prerequisites
 
 - [.NET 9 SDK](https://dotnet.microsoft.com/download/dotnet/9.0)
-- SQL Server LocalDB (included with Visual Studio) or SQL Server Express
+- MySQL Server (v8.0+) or MariaDB
 
 ## ⚡ Quick Start
 
@@ -98,7 +98,7 @@ Update `appsettings.Development.json` with your Google Cloud OAuth 2.0 credentia
 
 All configuration is in `appsettings.Development.json`:
 
-- **ConnectionStrings:DefaultConnection** — SQL Server connection string
+- **ConnectionStrings:DefaultConnection** — MySQL connection string (Server=...;Database=...;User=...;Password=...)
 - **Jwt:Key** — JWT signing key (min 32 characters)
 - **Jwt:Issuer / Audience** — Token issuer/audience
 - **Google:ClientId / ClientSecret** — Google OAuth credentials

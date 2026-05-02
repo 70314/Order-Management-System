@@ -1,7 +1,13 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\OMS.Domain\OMS.Domain.csproj" />
+    <ProjectReference Include="..\OMS.Infrastructure\OMS.Infrastructure.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

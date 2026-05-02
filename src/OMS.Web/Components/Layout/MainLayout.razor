@@ -1,4 +1,6 @@
 @inherits LayoutComponentBase
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavManager
 
 <div class="app-layout">
     <nav class="sidebar">
@@ -24,8 +26,39 @@
                 <span class="nav-text">Customers</span>
             </NavLink>
         </div>
+
+        <AuthorizeView>
+            <Authorized>
+                <div class="sidebar-user">
+                    <div class="user-info">
+                        <div class="user-avatar">
+                            @context.User.Identity?.Name?.Substring(0, 1).ToUpper()
+                        </div>
+                        <div class="user-details">
+                            <div class="user-name">@context.User.Identity?.Name</div>
+                            <div class="user-role">@context.User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value</div>
+                        </div>
+                    </div>
+                    <button class="logout-btn" @onclick="HandleLogout">
+                        <span class="nav-icon">🚪</span>
+                        <span class="nav-text">Logout</span>
+                    </button>
+                </div>
+            </Authorized>
+        </AuthorizeView>
     </nav>
     <main class="main-content">
         @Body
     </main>
 </div>
+
+@code {
+    private async Task HandleLogout()
+    {
+        if (AuthStateProvider is CustomAuthenticationStateProvider customAuthStateProvider)
+        {
+            await customAuthStateProvider.MarkUserAsLoggedOut();
+            NavManager.NavigateTo("login");
+        }
+    }
+}

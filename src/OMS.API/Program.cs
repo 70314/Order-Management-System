@@ -4,24 +4,25 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using OMS.API.Middleware;
+using OMS.Application;
 using OMS.Application.Interfaces;
+using OMS.Application.Services;
 using OMS.Domain.Interfaces;
+using OMS.Infrastructure;
 using OMS.Infrastructure.Data;
-using OMS.Infrastructure.Repositories;
-using OMS.Infrastructure.Services;
+using Prometheus;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // === Database ===
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseMySql(
+        builder.Configuration.GetConnectionString("DefaultConnection"),
+        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))));
 
 // === DI ===
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<ICustomerService, CustomerService>();
-builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddScoped<IOrderService, OrderService>();
+OMS.Application.DISetup.Setup(builder.Services);
+OMS.Infrastructure.DISetup.Setup(builder.Services);
 
 // === Auth ===
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "OMS_SuperSecretKey_2026_MustBe32Chars!!";
@@ -97,8 +98,14 @@ if (app.Environment.IsDevelopment()) {
 app.UseHttpsRedirection();
 app.UseCors("AllowBlazor");
 app.UseAuthentication();
+app.UseMiddleware<TokenValidationMiddleware>();
 app.UseAuthorization();
 app.MapControllers();
+
+app.UseRouting();
+app.UseHttpMetrics();
+
+app.MapMetrics();
 
 // === Auto-migrate in development ===
 using (var scope = app.Services.CreateScope()) {

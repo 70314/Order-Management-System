@@ -4,7 +4,7 @@ using OMS.Application.Interfaces;
 using OMS.Domain.Entities;
 using OMS.Domain.Interfaces;
 
-namespace OMS.Infrastructure.Services;
+namespace OMS.Application.Services;
 
 public class CustomerService : ICustomerService {
     private readonly IUnitOfWork _uow;
