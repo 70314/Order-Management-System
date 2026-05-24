@@ -41,11 +41,17 @@ public class GoogleLoginRequest {
     public string IdToken { get; set; } = string.Empty;
 }
 
+public class ZitadelLoginRequest {
+    [Required]
+    public string AccessToken { get; set; } = string.Empty;
+}
+
 public class AuthResponse {
     public string Token { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty;
+    public string AuthProvider { get; set; } = "InApp"; // TODO: Will make enums
     public DateTime Expiration { get; set; }
 }
 

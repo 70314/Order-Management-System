@@ -3,6 +3,7 @@
 @inject IAuthService AuthService
 @inject NavigationManager NavManager
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IConfiguration Configuration
 
 <PageTitle>Login - OMS</PageTitle>
 
@@ -61,6 +62,15 @@
     
     private string? errorMessage;
     private bool isSubmitting;
+
+    protected override void OnInitialized()
+    {
+        var useZitadel = Configuration.GetValue<bool>("Authentication:UseZitadelAuth");
+        if (useZitadel)
+        {
+            NavManager.NavigateTo("login-challenge", forceLoad: true);
+        }
+    }
 
     private async Task HandleLogin()
     {

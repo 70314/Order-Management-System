@@ -17,11 +17,13 @@ public class AuthService : IAuthService {
     private readonly IUnitOfWork _uow;
     private readonly IConfiguration _config;
     private readonly ILogger<AuthService> _logger;
+    private readonly IZitadelTokenValidator? _zitadelValidator;
 
-    public AuthService(IUnitOfWork uow, IConfiguration config, ILogger<AuthService> logger) {
+    public AuthService(IUnitOfWork uow, IConfiguration config, ILogger<AuthService> logger, IZitadelTokenValidator? zitadelValidator = null) {
         _uow = uow;
         _config = config;
         _logger = logger;
+        _zitadelValidator = zitadelValidator;
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request) {
@@ -96,6 +98,66 @@ public class AuthService : IAuthService {
         }
     }
 
+    /// <summary>
+    /// Validate with Zitadel
+    /// If user not exist in datase then add user
+    /// </summary>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    /// <exception cref="InvalidOperationException"></exception>
+    /// <exception cref="UnauthorizedAccessException"></exception>
+    public async Task<AuthResponse> ZitadelLoginAsync(ZitadelLoginRequest request) {
+        if (_zitadelValidator == null)
+            throw new InvalidOperationException("Zitadel authentication is not configured.");
+
+        var validationResult = await _zitadelValidator.ValidateTokenAsync(request.AccessToken);
+
+        if (!validationResult.IsValid)
+            throw new UnauthorizedAccessException($"Invalid Zitadel token: {validationResult.ErrorMessage}");
+
+        var email = validationResult.Email;
+        var name = validationResult.Name;
+        var zitadelId = validationResult.Subject;
+
+        if (string.IsNullOrEmpty(email) || string.IsNullOrEmpty(zitadelId))
+            throw new UnauthorizedAccessException("Zitadel token is missing required claims (email, sub).");
+
+        // Find existing user by ZitadelId or email
+        var users = await _uow.Users.FindAsync(u => u.ZitadelId == zitadelId || u.Email == email);
+        var user = users.FirstOrDefault();
+
+        if (user == null) {
+            // Auto-provision new user from Zitadel claims
+            user = new User {
+                Email = email,
+                Name = name ?? email,
+                ZitadelId = zitadelId,
+                Role = UserRole.User
+            };
+            await _uow.Users.AddAsync(user);
+            await _uow.SaveChangesAsync();
+            _logger.LogInformation("New Zitadel user provisioned: {Email} (ZitadelId: {ZitadelId})", email, zitadelId);
+        } else if (user.ZitadelId == null) {
+            // Link existing user to Zitadel account
+            user.ZitadelId = zitadelId;
+            _uow.Users.Update(user);
+            await _uow.SaveChangesAsync();
+            _logger.LogInformation("Linked existing user {Email} to Zitadel account {ZitadelId}", email, zitadelId);
+        }
+
+        _logger.LogInformation("Zitadel user {Email} authenticated successfully", email);
+
+        // Return the Zitadel token directly (no OMS token exchange)
+        return new AuthResponse {
+            Token = request.AccessToken,
+            Email = user.Email,
+            Name = user.Name,
+            Role = user.Role.ToString(),
+            Expiration = DateTime.UtcNow.AddHours(8), // Zitadel token expiry is validated by middleware
+            AuthProvider = "Zitadel"
+        };
+    }
+
     private AuthResponse GenerateToken(User user) {
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
             _config["Jwt:Key"] ?? "OMS_SuperSecretKey_2026_MustBe32Chars!!"));
@@ -123,7 +185,8 @@ public class AuthService : IAuthService {
             Email = user.Email,
             Name = user.Name,
             Role = user.Role.ToString(),
-            Expiration = expiration
+            Expiration = expiration,
+            AuthProvider = "InApp"
         };
     }
 

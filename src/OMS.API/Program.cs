@@ -21,23 +21,45 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))));
 
 // === DI ===
+var useZitadelAuth = builder.Configuration.GetValue<bool>("Authentication:UseZitadelAuth");
 OMS.Application.DISetup.Setup(builder.Services);
-OMS.Infrastructure.DISetup.Setup(builder.Services);
+OMS.Infrastructure.DISetup.Setup(builder.Services, builder.Configuration);
 
 // === Auth ===
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "OMS_SuperSecretKey_2026_MustBe32Chars!!";
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options => {
-        options.TokenValidationParameters = new TokenValidationParameters {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "OMS",
-            ValidAudience = builder.Configuration["Jwt:Audience"] ?? "OMS",
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
-        };
-    });
+if (useZitadelAuth) {
+    // Zitadel mode: validate Zitadel-issued JWTs using OIDC discovery (JWKS)
+    var zitadelAuthority = builder.Configuration["Authentication:Zitadel:Authority"] ?? throw new InvalidOperationException("Zitadel Authority is required when UseZitadelAuth is enabled.");
+    var zitadelAudience = builder.Configuration["Authentication:Zitadel:Audience"] ?? "";
+    var validateAudience = builder.Configuration.GetValue<bool>("Authentication:Zitadel:ValidateAudience", true);
+
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options => {
+            options.Authority = zitadelAuthority;
+            options.Audience = zitadelAudience;
+            options.TokenValidationParameters = new TokenValidationParameters {
+                ValidateIssuer = true,
+                ValidateAudience = validateAudience,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ClockSkew = TimeSpan.FromMinutes(2)
+            };
+        });
+} else {
+    // In-app mode: validate OMS-issued JWTs using symmetric key
+    var jwtKey = builder.Configuration["Jwt:Key"] ?? "OMS_SuperSecretKey_2026_MustBe32Chars!!";
+    builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        .AddJwtBearer(options => {
+            options.TokenValidationParameters = new TokenValidationParameters {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidateLifetime = true,
+                ValidateIssuerSigningKey = true,
+                ValidIssuer = builder.Configuration["Jwt:Issuer"] ?? "OMS",
+                ValidAudience = builder.Configuration["Jwt:Audience"] ?? "OMS",
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+            };
+        });
+}
 builder.Services.AddAuthorization();
 
 // === Controllers ===

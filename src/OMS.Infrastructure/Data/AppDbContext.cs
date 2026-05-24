@@ -20,10 +20,12 @@ public class AppDbContext : DbContext {
         modelBuilder.Entity<User>(entity => {
             entity.HasIndex(e => e.Email).IsUnique();
             entity.HasIndex(e => e.GoogleId).IsUnique().HasFilter("GoogleId IS NOT NULL");
+            entity.HasIndex(e => e.ZitadelId).IsUnique().HasFilter("ZitadelId IS NOT NULL");
             entity.Property(e => e.Email).HasMaxLength(256).IsRequired();
             entity.Property(e => e.Name).HasMaxLength(200).IsRequired();
             entity.Property(e => e.PasswordHash).HasMaxLength(512);
             entity.Property(e => e.GoogleId).HasMaxLength(256);
+            entity.Property(e => e.ZitadelId).HasMaxLength(256);
         });
 
         // Customer

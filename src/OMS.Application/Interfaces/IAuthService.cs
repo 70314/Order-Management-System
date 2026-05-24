@@ -5,5 +5,6 @@ namespace OMS.Application.Interfaces {
         Task<AuthResponse> LoginAsync(LoginRequest request);
         Task<AuthResponse> RegisterAsync(RegisterRequest request);
         Task<AuthResponse> GoogleLoginAsync(GoogleLoginRequest request);
+        Task<AuthResponse> ZitadelLoginAsync(ZitadelLoginRequest request);
     }
 }

@@ -7,6 +7,7 @@ public class User : BaseEntity {
     public string Name { get; set; } = string.Empty;
     public string? PasswordHash { get; set; }
     public string? GoogleId { get; set; }
+    public string? ZitadelId { get; set; }
     public UserRole Role { get; set; } = UserRole.User;
 
     // Navigation

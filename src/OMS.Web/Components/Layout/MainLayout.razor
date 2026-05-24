@@ -1,6 +1,7 @@
 @inherits LayoutComponentBase
 @inject AuthenticationStateProvider AuthStateProvider
 @inject NavigationManager NavManager
+@inject IConfiguration Configuration
 
 <div class="app-layout">
     <nav class="sidebar">
@@ -55,7 +56,12 @@
 @code {
     private async Task HandleLogout()
     {
-        if (AuthStateProvider is CustomAuthenticationStateProvider customAuthStateProvider)
+        var useZitadel = Configuration.GetValue<bool>("Authentication:UseZitadelAuth");
+        if (useZitadel)
+        {
+            NavManager.NavigateTo("logout-challenge", forceLoad: true);
+        }
+        else if (AuthStateProvider is CustomAuthenticationStateProvider customAuthStateProvider)
         {
             await customAuthStateProvider.MarkUserAsLoggedOut();
             NavManager.NavigateTo("login");
