@@ -1,10 +1,6 @@
 using OMS.Web.Components;
-using OMS.Application.Interfaces;
-using OMS.Domain.Interfaces;
 using OMS.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using OMS.Application.Services;
-using OMS.Infrastructure;
 using OMS.Web.Authentication;
 using Microsoft.AspNetCore.Components.Authorization;
 
@@ -21,11 +17,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))));
 
 // === DI ===
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
-builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<ICustomerService, CustomerService>();
-builder.Services.AddScoped<IProductService, ProductService>();
-builder.Services.AddScoped<IOrderService, OrderService>();
+
+OMS.Application.DISetup.Setup(builder.Services);
+OMS.Infrastructure.DISetup.Setup(builder.Services);
 
 // === Auth ===
 builder.Services.AddAuthentication(options => {
